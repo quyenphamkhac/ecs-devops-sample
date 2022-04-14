@@ -10,13 +10,6 @@ export class EcsDevopsSampleStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // Create a new repository
-    const repository = new ecr.Repository(
-      this,
-      "ecs-devops-sandbox-repository",
-      { repositoryName: "ecs-devops-sandbox-repository" }
-    );
-
     // Create a new vpc with public subnets
     const vpc = new ec2.Vpc(this, "ecs-devops-sandbox-vpc", {
       vpcName: "ecs-devops-sandbox-vpc",
@@ -136,7 +129,9 @@ export class EcsDevopsSampleStack extends Stack {
     const container = taskDefinition.addContainer(
       "ecs-devops-sandbox-container",
       {
-        image: ecs.ContainerImage.fromEcrRepository(repository),
+        image: ecs.ContainerImage.fromRegistry(
+          "666632162364.dkr.ecr.us-east-1.amazonaws.com/ecs-devops-sandbox-repository"
+        ),
         memoryReservationMiB: 512,
         environment: {
           SANDBOX_ELB_DNS: elb.loadBalancerDnsName,
