@@ -14,7 +14,9 @@ Hope you have fun ^^ Let's get started
 
 ## About this Repo <a name="About"></a>
 In this repo, I give a step-by-step guide for deploying applications to ECS Fargate use AWS CodePipeline with AWS CDK.
-Hope you have fun ^^ Let's get started
+Hope you have fun ^^ Let's get started. The image below gives an overview of what we are going to create using CDK.
+
+![ECS CI/CD Architecture](/design.png)
 
 ## Cdk Setup <a name="CdkSetup"></a>
 
