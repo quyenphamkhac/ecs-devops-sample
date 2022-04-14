@@ -115,3 +115,155 @@ elbSG.addIngressRule(
 // Attach the ELB to the Security Group
 elb.addSecurityGroup(elbSG);
 ```
+
+## ECS Cluster Setup <a name="ECSSetup"></a>
+This section helps to create all the resources in ECS and connects them to the application load balancer. It creates the following resources:
+
+Create a new ECS cluster:
+```typescript
+const cluster = new ecs.Cluster(this, "ecs-devops-sandbox-cluster", {
+  clusterName: "ecs-devops-sandbox-cluster",
+  vpc: vpc,
+});
+```
+
+Create a new ECS execution role help your cluster has permission for pulling image from AWS ECR and pushing logs to AWS Cloudwatch:
+```typescript
+const executionRole = new iam.Role(
+  this,
+  "ecs-devops-sandbox-execution-role",
+  {
+    assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+    roleName: "ecs-devops-sandbox-execution-role",
+  }
+);
+
+executionRole.addToPolicy(
+  new iam.PolicyStatement({
+    effect: iam.Effect.ALLOW,
+    resources: ["*"],
+    actions: [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ],
+  })
+);
+```
+
+You also need to create a task role that help the task and its containers can access AWS Resources through IAM Role:
+```typescript
+const taskRole = new iam.Role(this, "ecs-devops-sandbox-task-role", {
+  assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
+  roleName: "ecs-devops-sandbox-task-role",
+  description: "ECS Task Role",
+});
+
+// Allow sendEmail
+taskRole.addToPolicy(
+  new iam.PolicyStatement({
+    effect: iam.Effect.ALLOW,
+    resources: ["*"],
+    actions: ["ses:SendEmail"],
+  })
+);
+```
+
+Create a new ECS task definition:
+```typescript
+const taskDefinition = new ecs.FargateTaskDefinition(
+  this,
+  "ecs-devops-sandbox-task-definition",
+  {
+    cpu: 256,
+    memoryLimitMiB: 512,
+    executionRole: executionRole,
+    family: "ecs-devops-sandbox-task-definition",
+    taskRole: taskRole,
+  }
+);
+```
+
+Create a new docker container including the image to use:
+```typescript
+const container = taskDefinition.addContainer(
+  "ecs-devops-sandbox-container",
+  {
+    image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
+    memoryReservationMiB: 512,
+    environment: {
+      SANDBOX_ELB_DNS: elb.loadBalancerDnsName,
+    },
+    // Store the logs in cloudwatch
+    logging: new ecs.AwsLogDriver({ streamPrefix: "ecs-devops-sandbox" }),
+  }
+);
+```
+
+Mapping port for containers:
+```typescript
+container.addPortMappings({ containerPort: 80 });
+```
+
+Create a new Security groups to allow connections from the application load balancer to the fargate containers:
+```typescript
+const serviceSG = new ec2.SecurityGroup(
+  this,
+  "ecs-devops-sandbox-service-sg",
+  {
+    vpc: vpc,
+    allowAllOutbound: true,
+  }
+);
+
+serviceSG.connections.allowFrom(
+  elbSG,
+  ec2.Port.allTcp(),
+  "Allow traffic from the ELB"
+);
+```
+
+Create a new ECS Fargate Service user for deploying tasks:
+```typescript
+const service = new ecs.FargateService(this, "ecs-devops-sandbox-service", {
+  cluster: cluster,
+  taskDefinition: taskDefinition,
+  securityGroups: [serviceSG],
+  assignPublicIp: true,
+  desiredCount: 1,
+  serviceName: "ecs-devops-sandbox-service",
+});
+```
+
+Attach ECS Fargate Service to Target Group that we've created before:
+```typescript
+service.attachToApplicationTargetGroup(targetGroup);
+```
+
+Create a new Scalable Target for tasks based on CPU and Memory Utilization:
+```typescript
+const scalableTarget = service.autoScaleTaskCount({
+  maxCapacity: 3,
+  minCapacity: 1,
+});
+
+scalableTarget.scaleOnCpuUtilization("ecs-devops-sandbox-cpu-scaling", {
+  targetUtilizationPercent: 50,
+});
+
+scalableTarget.scaleOnMemoryUtilization(
+  "ecs-devops-sandbox-memory-scaling",
+  {
+    targetUtilizationPercent: 50,
+  }
+);
+```
+
+## CodePipeline Setup <a name="PipelineSetup"></a>
+In progress ...
+
+## License <a name="License"></a>
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  
