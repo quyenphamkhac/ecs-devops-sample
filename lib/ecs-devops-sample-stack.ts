@@ -45,6 +45,10 @@ export class EcsDevopsSampleStack extends Stack {
       protocol: elbv2.ApplicationProtocol.HTTP,
       port: 8080,
       vpc: vpc,
+      healthCheck: {
+        // My custom health check
+        path: "/api/v1/health",
+      },
     });
 
     // Create a new Load Balancer Listener
