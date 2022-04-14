@@ -66,11 +66,15 @@ export class EcsDevopsSampleStack extends Stack {
       allowAllOutbound: true,
     });
 
+    // Allow access from around the world
     elbSG.addIngressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(80),
       "Allow HTTP traffic from the world"
     );
+
+    // Attach the ELB to the Security Group
+    elb.addSecurityGroup(elbSG);
 
     // Create a new ECS cluster
     const cluster = new ecs.Cluster(this, "ecs-devops-sandbox-cluster", {
