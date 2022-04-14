@@ -136,7 +136,7 @@ export class EcsDevopsSampleStack extends Stack {
     const container = taskDefinition.addContainer(
       "ecs-devops-sandbox-container",
       {
-        image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
+        image: ecs.ContainerImage.fromEcrRepository(repository),
         memoryReservationMiB: 512,
         environment: {
           SANDBOX_ELB_DNS: elb.loadBalancerDnsName,
@@ -145,7 +145,7 @@ export class EcsDevopsSampleStack extends Stack {
       }
     );
 
-    container.addPortMappings({ containerPort: 80 });
+    container.addPortMappings({ containerPort: 8080 });
 
     const serviceSG = new ec2.SecurityGroup(
       this,
