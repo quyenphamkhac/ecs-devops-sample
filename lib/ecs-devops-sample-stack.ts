@@ -43,7 +43,7 @@ export class EcsDevopsSampleStack extends Stack {
     const targetGroup = new elbv2.ApplicationTargetGroup(this, "target-group", {
       targetType: elbv2.TargetType.IP,
       protocol: elbv2.ApplicationProtocol.HTTP,
-      port: 80,
+      port: 8080,
       vpc: vpc,
     });
 
@@ -130,7 +130,7 @@ export class EcsDevopsSampleStack extends Stack {
       "ecs-devops-sandbox-container",
       {
         image: ecs.ContainerImage.fromRegistry(
-          "666632162364.dkr.ecr.us-east-1.amazonaws.com/ecs-devops-sandbox-repository"
+          "666632162364.dkr.ecr.us-east-1.amazonaws.com/ecs-devops-sandbox-repository:lastest"
         ),
         memoryReservationMiB: 512,
         environment: {
@@ -166,6 +166,9 @@ export class EcsDevopsSampleStack extends Stack {
       desiredCount: 1,
       serviceName: "ecs-devops-sandbox-service",
     });
+
+    // Attach the ELB Target Group to the service
+    service.attachToApplicationTargetGroup(targetGroup);
 
     const scalableTarget = service.autoScaleTaskCount({
       maxCapacity: 3,
