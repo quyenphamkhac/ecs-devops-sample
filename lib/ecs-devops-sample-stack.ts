@@ -40,16 +40,35 @@ export class EcsDevopsSampleStack extends Stack {
       }
     );
 
-    const targetGroup = new elbv2.ApplicationTargetGroup(this, "target-group", {
-      targetType: elbv2.TargetType.IP,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      port: 8080,
-      vpc: vpc,
-      healthCheck: {
-        // My custom health check
-        path: "/api/v1/health",
-      },
-    });
+    const targetGroupBlue = new elbv2.ApplicationTargetGroup(
+      this,
+      "target-group",
+      {
+        targetType: elbv2.TargetType.IP,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        port: 8080,
+        vpc: vpc,
+        healthCheck: {
+          // My custom health check
+          path: "/api/v1/health",
+        },
+      }
+    );
+
+    const targetGroupGreen = new elbv2.ApplicationTargetGroup(
+      this,
+      "target-group-green",
+      {
+        targetType: elbv2.TargetType.IP,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        port: 8080,
+        vpc: vpc,
+        healthCheck: {
+          // My custom health check
+          path: "/api/v1/health",
+        },
+      }
+    );
 
     // Create a new Load Balancer Listener
     const listener = elb.addListener("ecs-devops-sandbox-listener", {
@@ -58,7 +77,7 @@ export class EcsDevopsSampleStack extends Stack {
     });
 
     listener.addTargetGroups("ecs-devops-sandbox-target-group", {
-      targetGroups: [targetGroup],
+      targetGroups: [targetGroupBlue],
     });
 
     const elbSG = new ec2.SecurityGroup(this, "ecs-devops-sandbox-elb-sg", {
@@ -121,6 +140,25 @@ export class EcsDevopsSampleStack extends Stack {
       })
     );
 
+    // Create ECS CodeDeploy Service Role
+    const ecsCodeDeployRole = new iam.Role(this, "ecs-codedeploy-role", {
+      assumedBy: new iam.ServicePrincipal("codedeploy.amazonaws.com"),
+      roleName: "ecs-codedeploy-role",
+      description: "ECS CodeDeploy Role",
+    });
+
+    ecsCodeDeployRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName("AWSCodeDeployRoleForECS")
+    );
+
+    ecsCodeDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        resources: [taskRole.roleArn, executionRole.roleArn],
+        actions: ["iam:PassRole"],
+      })
+    );
+
     // Create a new ECS task definition
     const taskDefinition = new ecs.FargateTaskDefinition(
       this,
@@ -176,7 +214,7 @@ export class EcsDevopsSampleStack extends Stack {
     });
 
     // Attach the ELB Target Group to the service
-    service.attachToApplicationTargetGroup(targetGroup);
+    service.attachToApplicationTargetGroup(targetGroupBlue);
 
     const scalableTarget = service.autoScaleTaskCount({
       maxCapacity: 3,
