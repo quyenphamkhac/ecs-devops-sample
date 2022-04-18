@@ -1,4 +1,4 @@
-# ECS Cluster CI/CD
+# ECS Blue/Green Deployment with AWS CodePipeline
 
 This repository contains a set of configuration to setup a CI/CD pipeline for an AWS ECS Cluster.
 All configuration powered by [AWS Cloud Development Kit](https://github.com/awslabs/aws-cdk).
@@ -77,7 +77,7 @@ const elb = new elbv2.ApplicationLoadBalancer(
 
 Create new target group with health check config for containers to be deployed to:
 ```typescript
-const targetGroup = new elbv2.ApplicationTargetGroup(this, "target-group", {
+const targetGroupBlue = new elbv2.ApplicationTargetGroup(this, "target-group", {
   targetType: elbv2.TargetType.IP,
   protocol: elbv2.ApplicationProtocol.HTTP,
   port: 8080,
@@ -97,7 +97,7 @@ const listener = elb.addListener("ecs-devops-sandbox-listener", {
 });
 
 listener.addTargetGroups("ecs-devops-sandbox-target-group", {
-  targetGroups: [targetGroup],
+  targetGroups: [targetGroupBlue],
 });
 ```
 
@@ -243,7 +243,7 @@ const service = new ecs.FargateService(this, "ecs-devops-sandbox-service", {
 
 Attach ECS Fargate Service to Target Group that we've created before:
 ```typescript
-service.attachToApplicationTargetGroup(targetGroup);
+service.attachToApplicationTargetGroup(targetGroupBlue);
 ```
 
 Create a new Scalable Target for tasks based on CPU and Memory Utilization:
@@ -266,7 +266,47 @@ scalableTarget.scaleOnMemoryUtilization(
 ```
 
 ## CodePipeline Setup <a name="PipelineSetup"></a>
-In progress ...
+To perform blue/green deployment with ECS and CodePipeline, you need to create some extra resources:
+
+Create a new Target Group for Green Environment that be used by CodePipeline:
+```typescript
+const targetGroupGreen = new elbv2.ApplicationTargetGroup(
+  this,
+  "target-group-green",
+  {
+    targetType: elbv2.TargetType.IP,
+    protocol: elbv2.ApplicationProtocol.HTTP,
+    port: 8080,
+    vpc: vpc,
+    healthCheck: {
+      // My custom health check
+      path: "/api/v1/health",
+    },
+  }
+);
+```
+
+You also need a service role that can be used by AWS CodeDeploy to perform actions in your ECS Cluster
+(for information, please read this documenation: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/codedeploy_IAM_role.html):
+```typescript
+const ecsCodeDeployRole = new iam.Role(this, "ecs-codedeploy-role", {
+  assumedBy: new iam.ServicePrincipal("codedeploy.amazonaws.com"),
+  roleName: "ecs-codedeploy-role",
+  description: "ECS CodeDeploy Role",
+});
+
+ecsCodeDeployRole.addManagedPolicy(
+  iam.ManagedPolicy.fromAwsManagedPolicyName("AWSCodeDeployRoleForECS")
+);
+
+ecsCodeDeployRole.addToPolicy(
+  new iam.PolicyStatement({
+    effect: iam.Effect.ALLOW,
+    resources: [taskRole.roleArn, executionRole.roleArn],
+    actions: ["iam:PassRole"],
+  })
+);
+```
 
 ## License <a name="License"></a>
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)  
