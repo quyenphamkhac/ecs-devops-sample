@@ -210,6 +210,10 @@ export class EcsDevopsSampleStack extends Stack {
       securityGroups: [serviceSG],
       assignPublicIp: true,
       desiredCount: 1,
+      deploymentController: {
+        type: ecs.DeploymentControllerType.CODE_DEPLOY,
+      },
+      enableECSManagedTags: true,
       serviceName: "ecs-devops-sandbox-service",
     });
 
