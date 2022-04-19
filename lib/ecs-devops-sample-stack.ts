@@ -214,7 +214,7 @@ export class EcsDevopsSampleStack extends Stack {
       taskDefinition: taskDefinition,
       securityGroups: [serviceSG],
       assignPublicIp: true,
-      desiredCount: 1,
+      desiredCount: 2,
       deploymentController: {
         type: ecs.DeploymentControllerType.CODE_DEPLOY,
       },
@@ -227,7 +227,7 @@ export class EcsDevopsSampleStack extends Stack {
 
     const scalableTarget = service.autoScaleTaskCount({
       maxCapacity: 3,
-      minCapacity: 1,
+      minCapacity: 2,
     });
 
     scalableTarget.scaleOnCpuUtilization("ecs-devops-sandbox-cpu-scaling", {
