@@ -5,6 +5,7 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import * as logs from "aws-cdk-lib/aws-logs";
 
 export class EcsDevopsSampleStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -182,7 +183,11 @@ export class EcsDevopsSampleStack extends Stack {
         environment: {
           SANDBOX_ELB_DNS: elb.loadBalancerDnsName,
         },
-        logging: new ecs.AwsLogDriver({ streamPrefix: "ecs-devops-sandbox" }),
+        logging: new ecs.AwsLogDriver({
+          streamPrefix: "ecs-devops-sandbox",
+          mode: ecs.AwsLogDriverMode.NON_BLOCKING,
+          logRetention: logs.RetentionDays.ONE_MONTH,
+        }),
       }
     );
 
