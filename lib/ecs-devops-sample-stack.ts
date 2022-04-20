@@ -61,8 +61,7 @@ export class EcsDevopsSampleStack extends Stack {
         port: 80,
         vpc: vpc,
         healthCheck: {
-          // My custom health check
-          path: "/api/v1/health",
+          path: "/",
         },
       }
     );
@@ -76,8 +75,7 @@ export class EcsDevopsSampleStack extends Stack {
         port: 80,
         vpc: vpc,
         healthCheck: {
-          // My custom health check
-          path: "/api/v1/health",
+          path: "/",
         },
       }
     );
