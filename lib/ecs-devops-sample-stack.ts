@@ -1,15 +1,26 @@
 import { Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
-// import * as ecr from "aws-cdk-lib/aws-ecr";
+import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import * as logs from "aws-cdk-lib/aws-logs";
+// import * as codedeploy from "aws-cdk-lib/aws-codedeploy";
+// import * as codebuild from "aws-cdk-lib/aws-codebuild";
+// import * as codepipeline from "aws-cdk-lib/aws-codepipeline";
 
 export class EcsDevopsSampleStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
+
+    const repository = new ecr.Repository(
+      this,
+      "ecs-devops-sandbox-repository",
+      {
+        repositoryName: "ecs-devops-sandbox",
+      }
+    );
 
     // Create a new vpc with public subnets
     const vpc = new ec2.Vpc(this, "ecs-devops-sandbox-vpc", {
@@ -47,7 +58,7 @@ export class EcsDevopsSampleStack extends Stack {
       {
         targetType: elbv2.TargetType.IP,
         protocol: elbv2.ApplicationProtocol.HTTP,
-        port: 8080,
+        port: 80,
         vpc: vpc,
         healthCheck: {
           // My custom health check
@@ -62,7 +73,7 @@ export class EcsDevopsSampleStack extends Stack {
       {
         targetType: elbv2.TargetType.IP,
         protocol: elbv2.ApplicationProtocol.HTTP,
-        port: 8080,
+        port: 80,
         vpc: vpc,
         healthCheck: {
           // My custom health check
@@ -176,9 +187,7 @@ export class EcsDevopsSampleStack extends Stack {
     const container = taskDefinition.addContainer(
       "ecs-devops-sandbox-container",
       {
-        image: ecs.ContainerImage.fromRegistry(
-          "666632162364.dkr.ecr.us-east-1.amazonaws.com/ecs-devops-sandbox-repository:lastest"
-        ),
+        image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
         memoryReservationMiB: 512,
         environment: {
           SANDBOX_ELB_DNS: elb.loadBalancerDnsName,
@@ -191,7 +200,7 @@ export class EcsDevopsSampleStack extends Stack {
       }
     );
 
-    container.addPortMappings({ containerPort: 8080 });
+    container.addPortMappings({ containerPort: 80 });
 
     const serviceSG = new ec2.SecurityGroup(
       this,
